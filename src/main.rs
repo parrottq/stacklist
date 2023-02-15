@@ -1,6 +1,18 @@
+use std::num::NonZeroUsize;
+
 enum Op<T, U> {
     Store(T),
     Return(U),
+    Pop,
+    PopMultiple(usize),
+    Clear,
+}
+
+enum OpResult<U> {
+    Return(U),
+    // Pop,
+    PopMultiple(NonZeroUsize),
+    Clear,
 }
 
 #[derive(Clone, Copy)]
@@ -33,41 +45,86 @@ struct Node<'a, T> {
     value: T,
 }
 
-fn start_list<'a, T, U>(
-    mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>,
+fn inner_stack_list<'a, T, U>(
+    fun: &mut impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>,
     node: Option<&'a Node<'a, T>>,
-) -> U {
+) -> OpResult<U> {
     match fun(StackList(node)) {
         Op::Store(store_val) => {
             let node_inner = Node {
                 previous: node,
                 value: store_val,
             };
-            let e = &node_inner;
-            start_list(fun, Some(e))
+            loop {
+                return match inner_stack_list(fun, Some(&node_inner)) {
+                    OpResult::PopMultiple(count) => {
+                        let count = count.get();
+                        if count > 0 {
+                            return OpResult::PopMultiple(NonZeroUsize::new(count - 1).unwrap());
+                        }
+                        continue; // Too many pops shoud panic?
+                    }
+                    OpResult::Return(result) => OpResult::Return(result),
+                    OpResult::Clear => OpResult::Clear,
+                };
+            }
         }
-        Op::Return(return_val) => return_val,
+        Op::Return(return_val) => OpResult::Return(return_val),
+        Op::Clear => OpResult::Clear,
+        Op::Pop => OpResult::PopMultiple(NonZeroUsize::new(1).unwrap()),
+        Op::PopMultiple(count) => NonZeroUsize::new(count)
+            .map(|x| OpResult::PopMultiple(x))
+            .unwrap_or(OpResult::Clear), // TODO: Many pops should panic?
     }
 }
 
-fn start_list_empty<T, U>(fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> U {
-    start_list(fun, None)
+fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> U {
+    loop {
+        match inner_stack_list(&mut fun, None) {
+            OpResult::Return(result) => return result,
+            OpResult::PopMultiple(_) => (), // TODO: Too many pops should panic?
+            OpResult::Clear => (),
+        }
+    }
 }
 
 fn main() {
     let mut i = 0i32;
-    let result = start_list_empty(|lst| {
+    let result = new_list(|lst| {
         i += 1;
         match i {
             0..=4 => {
                 println!("Storing {i}");
                 Op::Store(Box::new(i))
             }
-            _ => {
-                let all = String::from_iter(lst.iter().map(|d| format!("{d}, ")));
-
+            5 => {
                 println!(
-                    "Total {}; {all}",
+                    "{}",
+                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                );
+                Op::Pop
+            }
+            6 => {
+                println!(
+                    "{}",
+                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                );
+                Op::PopMultiple(2)
+            }
+            7 => {
+                println!(
+                    "{}",
+                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                );
+                Op::Store(Box::new(i))
+            }
+            _ => {
+                println!(
+                    "{}",
+                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                );
+                println!(
+                    "Total {}",
                     lst.iter()
                         .map(|x| {
                             let e: i32 = *x.as_ref();
