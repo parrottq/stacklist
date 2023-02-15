@@ -1,4 +1,4 @@
-use std::{fmt::Debug, num::NonZeroUsize};
+use std::fmt::Debug;
 
 #[derive(Debug)]
 enum Op<T, U> {
@@ -12,7 +12,7 @@ enum Op<T, U> {
 enum OpResult<U> {
     Return(U),
     // Pop,
-    PopMultiple(NonZeroUsize),
+    PopMultiple(usize),
     Clear,
 }
 
@@ -63,10 +63,8 @@ fn inner_stack_list<'a, T, U>(
             loop {
                 return match inner_stack_list(fun, Some(&node_inner)) {
                     OpResult::PopMultiple(count) => {
-                        if let Some(count) = count.get().checked_sub(1) {
-                            if count > 0 {
-                                return OpResult::PopMultiple(NonZeroUsize::new(count).unwrap());
-                            }
+                        if let Some(count) = count.checked_sub(1) {
+                            return OpResult::PopMultiple(count);
                         }
                         continue; // Too many pops shoud panic?
                     }
@@ -77,10 +75,8 @@ fn inner_stack_list<'a, T, U>(
         }
         Op::Return(return_val) => OpResult::Return(return_val),
         Op::Clear => OpResult::Clear,
-        Op::Pop => OpResult::PopMultiple(NonZeroUsize::new(1 + 1).unwrap()),
-        Op::PopMultiple(count) => NonZeroUsize::new(count)
-            .map(|x| OpResult::PopMultiple(x.checked_add(1).unwrap()))
-            .unwrap_or(OpResult::Clear), // TODO: Many pops should panic?
+        Op::Pop => OpResult::PopMultiple(1),
+        Op::PopMultiple(count) => OpResult::PopMultiple(count), // TODO: Many pops should panic?
     }
 }
 
