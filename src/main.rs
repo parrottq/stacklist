@@ -1,5 +1,6 @@
-use std::num::NonZeroUsize;
+use std::{fmt::Debug, num::NonZeroUsize};
 
+#[derive(Debug)]
 enum Op<T, U> {
     Store(T),
     Return(U),
@@ -48,7 +49,11 @@ struct Node<'a, T> {
 fn inner_stack_list<'a, T, U>(
     fun: &mut impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>,
     node: Option<&'a Node<'a, T>>,
-) -> OpResult<U> {
+) -> OpResult<U>
+// where
+//     T: Debug,
+//     U: Debug,
+{
     match fun(StackList(node)) {
         Op::Store(store_val) => {
             let node_inner = Node {
@@ -58,9 +63,10 @@ fn inner_stack_list<'a, T, U>(
             loop {
                 return match inner_stack_list(fun, Some(&node_inner)) {
                     OpResult::PopMultiple(count) => {
-                        let count = count.get();
-                        if count > 0 {
-                            return OpResult::PopMultiple(NonZeroUsize::new(count - 1).unwrap());
+                        if let Some(count) = count.get().checked_sub(1) {
+                            if count > 0 {
+                                return OpResult::PopMultiple(NonZeroUsize::new(count).unwrap());
+                            }
                         }
                         continue; // Too many pops shoud panic?
                     }
@@ -71,14 +77,18 @@ fn inner_stack_list<'a, T, U>(
         }
         Op::Return(return_val) => OpResult::Return(return_val),
         Op::Clear => OpResult::Clear,
-        Op::Pop => OpResult::PopMultiple(NonZeroUsize::new(1).unwrap()),
+        Op::Pop => OpResult::PopMultiple(NonZeroUsize::new(1 + 1).unwrap()),
         Op::PopMultiple(count) => NonZeroUsize::new(count)
-            .map(|x| OpResult::PopMultiple(x))
+            .map(|x| OpResult::PopMultiple(x.checked_add(1).unwrap()))
             .unwrap_or(OpResult::Clear), // TODO: Many pops should panic?
     }
 }
 
-fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> U {
+fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> U
+// where
+//     T: Debug,
+//     U: Debug,
+{
     loop {
         match inner_stack_list(&mut fun, None) {
             OpResult::Return(result) => return result,
