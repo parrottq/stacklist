@@ -1,0 +1,27 @@
+[package]
+name = "stacklist-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.stacklist]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "vec_compare"
+path = "fuzz_targets/vec_compare.rs"
+test = false
+doc = false
