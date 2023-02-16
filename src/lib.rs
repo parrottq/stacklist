@@ -1,7 +1,8 @@
 use std::fmt::Debug;
+use arbitrary::Arbitrary;
 
-#[derive(Debug)]
-enum Op<T, U> {
+#[derive(Clone, Copy, Debug, Arbitrary)]
+pub enum Op<T, U> {
     Store(T),
     Return(U),
     Pop,
@@ -17,7 +18,7 @@ enum OpResult<U> {
 }
 
 #[derive(Clone, Copy)]
-struct StackList<'a, T>(Option<&'a Node<'a, T>>); // TODO: Necessary? Make it not copy?
+pub struct StackList<'a, T>(Option<&'a Node<'a, T>>); // TODO: Necessary? Make it not copy?
 
 impl<'a, T> StackList<'a, T> {
     pub fn iter(&self) -> StackListIter<'a, T> {
@@ -25,7 +26,7 @@ impl<'a, T> StackList<'a, T> {
     }
 }
 
-struct StackListIter<'a, T>(Option<&'a Node<'a, T>>);
+pub struct StackListIter<'a, T>(Option<&'a Node<'a, T>>);
 
 impl<'a, T> Iterator for StackListIter<'a, T> {
     type Item = &'a T;
@@ -80,7 +81,7 @@ fn inner_stack_list<'a, T, U>(
     }
 }
 
-fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> U
+pub fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> U
 // where
 //     T: Debug,
 //     U: Debug,
@@ -92,56 +93,4 @@ fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> 
             OpResult::Clear => (),
         }
     }
-}
-
-fn main() {
-    let mut i = 0i32;
-    let result = new_list(|lst| {
-        i += 1;
-        match i {
-            0..=4 => {
-                println!("Storing {i}");
-                Op::Store(Box::new(i))
-            }
-            5 => {
-                println!(
-                    "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
-                );
-                Op::Pop
-            }
-            6 => {
-                println!(
-                    "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
-                );
-                Op::PopMultiple(2)
-            }
-            7 => {
-                println!(
-                    "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
-                );
-                Op::Store(Box::new(i))
-            }
-            _ => {
-                println!(
-                    "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
-                );
-                println!(
-                    "Total {}",
-                    lst.iter()
-                        .map(|x| {
-                            let e: i32 = *x.as_ref();
-                            e
-                        })
-                        .sum::<i32>()
-                );
-                Op::Return(1)
-            }
-        }
-    });
-
-    println!("{result}");
 }
