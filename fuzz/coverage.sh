@@ -1,0 +1,2 @@
+grcov . -s ../ --binary-path target/x86_64-unknown-linux-gnu/coverage/x86_64-unknown-linux-gnu/release/vec_compare -t html --branch -o target/release/coverage/
+grcov . -s ../ --binary-path target/x86_64-unknown-linux-gnu/coverage/x86_64-unknown-linux-gnu/debug/vec_compare -t html --branch -o target/debug/coverage/
