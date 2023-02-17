@@ -44,5 +44,6 @@ fn main() {
     // TODO: Check unsafe with MIRI
     // TODO: Documentation generally
     // TODO: Cleanup public interface (look at rustdoc)
+    // TODO: Make nightly generator support optional
     dbg!(result);
 }
