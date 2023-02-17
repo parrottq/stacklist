@@ -1,14 +1,18 @@
 #![feature(generator_trait)]
 
-use arbitrary::Arbitrary;
-use std::{
+#![cfg_attr(not(feature = "alloc"), no_std)]
+use core::{
     fmt::Debug,
     marker::PhantomData,
     ops::{Deref, Generator, GeneratorState},
     pin::Pin,
 };
 
-#[derive(Clone, Copy, Debug, Arbitrary)]
+#[cfg(feature = "alloc")]
+use arbitrary::Arbitrary;
+
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "alloc", derive(Arbitrary))]
 pub enum Op<T, U> {
     Store(T),
     Return(U),

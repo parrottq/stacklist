@@ -6,6 +6,9 @@ edition = "2021"
 [dependencies]
 arbitrary = { version = "1.2", features = ["derive"] }
 
+[features]
+alloc = []
+
 [[example]]
 name = "basic"
 
