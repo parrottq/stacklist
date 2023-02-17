@@ -1,5 +1,12 @@
-use std::fmt::Debug;
+#![feature(generator_trait)]
+
 use arbitrary::Arbitrary;
+use std::{
+    fmt::Debug,
+    marker::PhantomData,
+    ops::{Deref, Generator, GeneratorState},
+    pin::Pin,
+};
 
 #[derive(Clone, Copy, Debug, Arbitrary)]
 pub enum Op<T, U> {
@@ -93,4 +100,66 @@ pub fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>)
             OpResult::Clear => (),
         }
     }
+}
+
+pub struct StackListToken<T, U>(*const usize, PhantomData<T>, PhantomData<*const U>);
+
+impl<'a, T, U> StackListToken<T, U> {
+    pub unsafe fn new(stack_list: &StackList<'a, T>) -> Self {
+        let e = stack_list as *const StackList<'a, T>;
+        let e = e as *const usize;
+        Self(e, PhantomData, PhantomData)
+    }
+
+    pub fn lifetimeless_view<R, F>(stack_list: &StackList<'a, T>, fun: F) -> R
+    where
+        F: FnOnce(StackListToken<T, U>) -> (StackListToken<T, U>, R),
+    {
+        // TODO: Why is this safe? (unique generic from closure, not clonable, unique type)
+        unsafe {
+            let result = fun(StackListToken::new(stack_list));
+            let _: StackListToken<T, U> = result.0; // Make sure this is returned
+            result.1
+        }
+    }
+
+    pub fn borrow(&'a self) -> StackListTokenBorrowed<'a, T> {
+        let inner: &'a StackList<T> = unsafe { &*(self.0 as *const StackList<'a, T>) };
+        StackListTokenBorrowed(inner)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct StackListTokenBorrowed<'a, T>(&'a StackList<'a, T>);
+
+impl<'a, T> Deref for StackListTokenBorrowed<'a, T> {
+    type Target = StackList<'a, T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub fn list_from_generator<T, R, U>(
+    mut fun: Pin<
+        &mut impl Generator<
+            StackListToken<T, U>,
+            Yield = (StackListToken<T, U>, Op<T, R>),
+            Return = (StackListToken<T, U>, R),
+        >,
+    >,
+    _unique: U,
+) -> R
+where
+    U: FnOnce(),
+{
+    new_list(|lst| {
+        StackListToken::lifetimeless_view(&lst, |tok| {
+            let result = fun.as_mut().resume(tok);
+            match result {
+                GeneratorState::Yielded((token, op)) => (token, op),
+                GeneratorState::Complete((token, result)) => (token, Op::Return(result)),
+            }
+        })
+    })
 }
