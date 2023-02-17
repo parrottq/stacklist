@@ -1,5 +1,4 @@
 #![feature(generator_trait)]
-
 #![cfg_attr(not(feature = "alloc"), no_std)]
 use core::{
     fmt::Debug,
@@ -10,6 +9,9 @@ use core::{
 
 #[cfg(feature = "alloc")]
 use arbitrary::Arbitrary;
+
+pub mod list;
+pub mod node_mut;
 
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "alloc", derive(Arbitrary))]
@@ -106,6 +108,7 @@ pub fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>)
     }
 }
 
+// TODO: usize -> ()?
 pub struct StackListToken<T, U>(*const usize, PhantomData<T>, PhantomData<*const U>);
 
 impl<'a, T, U> StackListToken<T, U> {
