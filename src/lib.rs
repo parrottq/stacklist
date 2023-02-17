@@ -10,6 +10,7 @@ use core::{
 #[cfg(feature = "alloc")]
 use arbitrary::Arbitrary;
 
+pub mod callback;
 pub mod list;
 pub mod node_mut;
 
@@ -144,7 +145,7 @@ impl<'a, T> Deref for StackListTokenBorrowed<'a, T> {
     type Target = StackList<'a, T>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 

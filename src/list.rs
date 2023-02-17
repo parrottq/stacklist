@@ -6,9 +6,21 @@ use crate::node_mut::NodeMut;
 pub struct StackListMut<'a, 'b, T>(Option<&'b mut NodeMut<'a, T>>);
 
 impl<'a, 'b, T> StackListMut<'a, 'b, T> {
+    pub(crate) fn new(top_node: Option<&'b mut NodeMut<'a, T>>) -> Self {
+        StackListMut(top_node)
+    }
+
+    pub(crate) fn take(self) -> Option<&'b mut NodeMut<'a, T>> {
+        self.0
+    }
+}
+
+impl<'a, 'b, T> StackListMut<'a, 'b, T> {
     pub fn iter_mut<'c>(&'c mut self) -> StackListMutIter<'a, 'b, 'c, T> {
         StackListMutIter(&mut self.0)
     }
+
+    // TODO: Impl `iter()`
 }
 
 pub struct StackListMutIter<'a, 'b, 'c, T>(&'c mut Option<&'b mut NodeMut<'a, T>>);

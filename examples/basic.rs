@@ -1,4 +1,4 @@
-use stacklist::{new_list, Op};
+use stacklist::{callback::new_list, Op};
 
 fn main() {
     let mut i = 0i32;
@@ -13,32 +13,32 @@ fn main() {
             5 => {
                 println!(
                     "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                    String::from_iter(lst.iter_mut().map(|d| format!("{d}, ")))
                 );
                 Op::Pop
             }
             6 => {
                 println!(
                     "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                    String::from_iter(lst.iter_mut().map(|d| format!("{d}, ")))
                 );
                 Op::PopMultiple(2)
             }
             7 => {
                 println!(
                     "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                    String::from_iter(lst.iter_mut().map(|d| format!("{d}, ")))
                 );
                 Op::Store(Box::new(i))
             }
             _ => {
                 println!(
                     "{}",
-                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
+                    String::from_iter(lst.iter_mut().map(|d| format!("{d}, ")))
                 );
                 println!(
                     "Total {}",
-                    lst.iter()
+                    lst.iter_mut()
                         .map(|x| {
                             let e: i32 = *x.as_ref();
                             e
