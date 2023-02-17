@@ -3,7 +3,6 @@ use stacklist::{new_list, Op};
 fn main() {
     let mut i = 0i32;
 
-
     let result = new_list(|lst| {
         i += 1;
         match i {

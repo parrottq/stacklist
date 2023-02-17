@@ -32,6 +32,7 @@ enum OpResult<U> {
 
 #[derive(Clone, Copy)]
 pub struct StackList<'a, T>(Option<&'a Node<'a, T>>); // TODO: Necessary? Make it not copy?
+                                                      // TODO: Store length? (benchmark)
 
 impl<'a, T> StackList<'a, T> {
     pub fn iter(&self) -> StackListIter<'a, T> {
