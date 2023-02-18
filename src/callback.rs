@@ -1,10 +1,10 @@
-use crate::{list::StackListMut, node_mut::NodeMut, Op, OpResult};
+use crate::{list::StackList, node_mut::NodeMut, Op, OpResult};
 
 fn inner_stack_list<'a, 'b, T, U>(
-    fun: &mut impl for<'c, 'd> FnMut(&mut StackListMut<'c, 'd, T>) -> Op<T, U>,
+    fun: &mut impl for<'c, 'd> FnMut(&mut StackList<'c, 'd, T>) -> Op<T, U>,
     node: Option<&'b mut NodeMut<'a, T>>,
 ) -> OpResult<U> {
-    let mut stack = StackListMut::new(node);
+    let mut stack = StackList::new(node);
     match fun(&mut stack) {
         Op::Store(store_val) => {
             let node_inner = &mut NodeMut::new(stack.take(), store_val);
@@ -28,7 +28,7 @@ fn inner_stack_list<'a, 'b, T, U>(
     }
 }
 
-pub fn new_list<T, U>(mut fun: impl for<'c, 'd> FnMut(&mut StackListMut<'c, 'd, T>) -> Op<T, U>) -> U {
+pub fn new_list<T, U>(mut fun: impl for<'c, 'd> FnMut(&mut StackList<'c, 'd, T>) -> Op<T, U>) -> U {
     loop {
         match inner_stack_list(&mut fun, None) {
             OpResult::Return(result) => return result,

@@ -1,4 +1,4 @@
-use stacklist::{callback::new_list, Op};
+use stacklist::{new_list, Op};
 
 fn main() {
     let mut i = 0i32;

@@ -4,11 +4,11 @@ use crate::{node_mut::NodeMut, node_ref::NodeRef};
 
 // TODO: Store length? (benchmark)
 // TODO: Make self.0 pub?
-pub struct StackListMut<'a, 'b, T>(Option<&'b mut NodeMut<'a, T>>);
+pub struct StackList<'a, 'b, T>(Option<&'b mut NodeMut<'a, T>>);
 
-impl<'a, 'b, T> StackListMut<'a, 'b, T> {
+impl<'a, 'b, T> StackList<'a, 'b, T> {
     pub(crate) fn new(top_node: Option<&'b mut NodeMut<'a, T>>) -> Self {
-        StackListMut(top_node)
+        StackList(top_node)
     }
 
     pub(crate) fn take(self) -> Option<&'b mut NodeMut<'a, T>> {
@@ -16,7 +16,7 @@ impl<'a, 'b, T> StackListMut<'a, 'b, T> {
     }
 }
 
-impl<'a, 'b, T> StackListMut<'a, 'b, T> {
+impl<'a, 'b, T> StackList<'a, 'b, T> {
     pub fn iter_mut<'c>(&'c mut self) -> StackListMutIter<'a, 'b, 'c, T> {
         StackListMutIter(&mut self.0)
     }
@@ -87,8 +87,8 @@ fn test_iter_mut() {
 
     let _f = &mut d;
     let head = &mut d;
-    let mut _list = StackListMut(Some(head));
-    let mut list = StackListMut(Some(head));
+    let mut _list = StackList(Some(head));
+    let mut list = StackList(Some(head));
 
     {
         let mut iter = list.iter_mut();

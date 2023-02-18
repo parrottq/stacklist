@@ -3,6 +3,9 @@
 use libfuzzer_sys::fuzz_target;
 use stacklist::{new_list, Op, StackListIter};
 
+// TODO: Mutable compare
+// TODO: ZST compare?
+
 fuzz_target!(|data: Vec<Op<(), ()>>| {
     // if data.len() < 10 {
     //     return;

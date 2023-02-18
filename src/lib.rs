@@ -9,12 +9,18 @@ use core::{
 
 #[cfg(feature = "alloc")]
 use arbitrary::Arbitrary;
-use list::StackListMut;
 
-pub mod callback;
-pub mod list;
-pub mod node_mut;
-pub mod node_ref;
+// TODO: Compare stack size of recursive call (w/ ZST and other types)
+// TODO: Create empty list on stack shorthand `with_size(3, Default::default(), |lst| {lst.iter_mut()})` (better name needed)
+
+// TODO: Cleanup public interface
+mod callback;
+mod list;
+mod node_mut;
+mod node_ref;
+
+pub use callback::new_list;
+pub use list::{StackList, StackListMutIter, StackListIter};
 
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "alloc", derive(Arbitrary))]
@@ -39,13 +45,13 @@ enum OpResult<U> {
 pub struct StackListToken<T, U>(*const usize, PhantomData<T>, PhantomData<*const U>);
 
 impl<'a, 'b, T, U> StackListToken<T, U> {
-    pub unsafe fn new(stack_list: &StackListMut<'b, 'a, T>) -> Self {
-        let e = stack_list as *const StackListMut<'b, 'a, T>;
+    pub unsafe fn new(stack_list: &StackList<'b, 'a, T>) -> Self {
+        let e = stack_list as *const StackList<'b, 'a, T>;
         let e = e as *const usize;
         Self(e, PhantomData, PhantomData)
     }
 
-    pub fn lifetimeless_view<R, F>(stack_list: &StackListMut<'b, 'a, T>, fun: F) -> R
+    pub fn lifetimeless_view<R, F>(stack_list: &StackList<'b, 'a, T>, fun: F) -> R
     where
         F: FnOnce(StackListToken<T, U>) -> (StackListToken<T, U>, R),
     {
@@ -58,22 +64,23 @@ impl<'a, 'b, T, U> StackListToken<T, U> {
     }
 
     pub fn borrow(&'a self) -> StackListTokenBorrowed<'b, 'a, T> {
-        let inner: &'a StackListMut<T> = unsafe { &*(self.0 as *const StackListMut<'b, 'a, T>) };
+        let inner: &'a StackList<T> = unsafe { &*(self.0 as *const StackList<'b, 'a, T>) };
         StackListTokenBorrowed(inner)
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct StackListTokenBorrowed<'a, 'b, T>(&'a StackListMut<'a, 'b, T>);
+pub struct StackListTokenBorrowed<'a, 'b, T>(&'a StackList<'a, 'b, T>);
 
 impl<'a, 'b, T> Deref for StackListTokenBorrowed<'a, 'b, T> {
-    type Target = StackListMut<'a, 'b, T>;
+    type Target = StackList<'a, 'b, T>;
 
     fn deref(&self) -> &Self::Target {
         self.0
     }
 }
 
+// TODO: Make the names better
 pub fn list_from_generator<T, R, U>(
     mut fun: Pin<
         &mut impl Generator<
