@@ -9,15 +9,18 @@ use core::{
 
 #[cfg(feature = "alloc")]
 use arbitrary::Arbitrary;
+use list::StackListMut;
 
 pub mod callback;
 pub mod list;
 pub mod node_mut;
+pub mod node_ref;
 
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "alloc", derive(Arbitrary))]
 pub enum Op<T, U> {
     Store(T),
+    // From iter
     Return(U),
     Pop,
     PopMultiple(usize),
@@ -31,96 +34,18 @@ enum OpResult<U> {
     Clear,
 }
 
-#[derive(Clone, Copy)]
-pub struct StackList<'a, T>(Option<&'a Node<'a, T>>); // TODO: Necessary? Make it not copy?
-                                                      // TODO: Store length? (benchmark)
-
-impl<'a, T> StackList<'a, T> {
-    pub fn iter(&self) -> StackListIter<'a, T> {
-        StackListIter(self.0)
-    }
-}
-
-pub struct StackListIter<'a, T>(Option<&'a Node<'a, T>>);
-
-impl<'a, T> Iterator for StackListIter<'a, T> {
-    type Item = &'a T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.0 {
-            Some(inner) => {
-                self.0 = inner.previous;
-                Some(&inner.value)
-            }
-            None => None,
-        }
-    }
-}
-
-struct Node<'a, T> {
-    previous: Option<&'a Node<'a, T>>,
-    value: T,
-}
-
-fn inner_stack_list<'a, T, U>(
-    fun: &mut impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>,
-    node: Option<&'a Node<'a, T>>,
-) -> OpResult<U>
-// where
-//     T: Debug,
-//     U: Debug,
-{
-    match fun(StackList(node)) {
-        Op::Store(store_val) => {
-            let node_inner = Node {
-                previous: node,
-                value: store_val,
-            };
-            loop {
-                return match inner_stack_list(fun, Some(&node_inner)) {
-                    OpResult::PopMultiple(count) => {
-                        if let Some(count) = count.checked_sub(1) {
-                            return OpResult::PopMultiple(count);
-                        }
-                        continue; // Too many pops shoud panic?
-                    }
-                    OpResult::Return(result) => OpResult::Return(result),
-                    OpResult::Clear => OpResult::Clear,
-                };
-            }
-        }
-        Op::Return(return_val) => OpResult::Return(return_val),
-        Op::Clear => OpResult::Clear,
-        Op::Pop => OpResult::PopMultiple(1),
-        Op::PopMultiple(count) => OpResult::PopMultiple(count), // TODO: Many pops should panic?
-    }
-}
-
-pub fn new_list<T, U>(mut fun: impl for<'c> FnMut(StackList<'c, T>) -> Op<T, U>) -> U
-// where
-//     T: Debug,
-//     U: Debug,
-{
-    loop {
-        match inner_stack_list(&mut fun, None) {
-            OpResult::Return(result) => return result,
-            OpResult::PopMultiple(_) => (), // TODO: Too many pops should panic?
-            OpResult::Clear => (),
-        }
-    }
-}
 
 // TODO: usize -> ()?
 pub struct StackListToken<T, U>(*const usize, PhantomData<T>, PhantomData<*const U>);
 
-impl<'a, T, U> StackListToken<T, U> {
-    pub unsafe fn new(stack_list: &StackList<'a, T>) -> Self {
-        let e = stack_list as *const StackList<'a, T>;
+impl<'a, 'b, T, U> StackListToken<T, U> {
+    pub unsafe fn new(stack_list: &StackListMut<'b, 'a, T>) -> Self {
+        let e = stack_list as *const StackListMut<'b, 'a, T>;
         let e = e as *const usize;
         Self(e, PhantomData, PhantomData)
     }
 
-    pub fn lifetimeless_view<R, F>(stack_list: &StackList<'a, T>, fun: F) -> R
+    pub fn lifetimeless_view<R, F>(stack_list: &StackListMut<'b, 'a, T>, fun: F) -> R
     where
         F: FnOnce(StackListToken<T, U>) -> (StackListToken<T, U>, R),
     {
@@ -132,17 +57,17 @@ impl<'a, T, U> StackListToken<T, U> {
         }
     }
 
-    pub fn borrow(&'a self) -> StackListTokenBorrowed<'a, T> {
-        let inner: &'a StackList<T> = unsafe { &*(self.0 as *const StackList<'a, T>) };
+    pub fn borrow(&'a self) -> StackListTokenBorrowed<'b, 'a, T> {
+        let inner: &'a StackListMut<T> = unsafe { &*(self.0 as *const StackListMut<'b, 'a, T>) };
         StackListTokenBorrowed(inner)
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct StackListTokenBorrowed<'a, T>(&'a StackList<'a, T>);
+pub struct StackListTokenBorrowed<'a, 'b, T>(&'a StackListMut<'a, 'b, T>);
 
-impl<'a, T> Deref for StackListTokenBorrowed<'a, T> {
-    type Target = StackList<'a, T>;
+impl<'a, 'b, T> Deref for StackListTokenBorrowed<'a, 'b, T> {
+    type Target = StackListMut<'a, 'b, T>;
 
     fn deref(&self) -> &Self::Target {
         self.0
@@ -162,7 +87,7 @@ pub fn list_from_generator<T, R, U>(
 where
     U: FnOnce(),
 {
-    new_list(|lst| {
+    callback::new_list(|lst| {
         StackListToken::lifetimeless_view(&lst, |tok| {
             let result = fun.as_mut().resume(tok);
             match result {

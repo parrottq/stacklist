@@ -34,7 +34,7 @@ fn main() {
             _ => {
                 println!(
                     "{}",
-                    String::from_iter(lst.iter_mut().map(|d| format!("{d}, ")))
+                    String::from_iter(lst.iter().map(|d| format!("{d}, ")))
                 );
                 println!(
                     "Total {}",

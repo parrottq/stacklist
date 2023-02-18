@@ -1,7 +1,8 @@
 use core::{iter::FusedIterator, mem::replace, ptr::NonNull};
 
-use crate::node_mut::NodeMut;
+use crate::{node_mut::NodeMut, node_ref::NodeRef};
 
+// TODO: Store length? (benchmark)
 // TODO: Make self.0 pub?
 pub struct StackListMut<'a, 'b, T>(Option<&'b mut NodeMut<'a, T>>);
 
@@ -20,12 +21,15 @@ impl<'a, 'b, T> StackListMut<'a, 'b, T> {
         StackListMutIter(&mut self.0)
     }
 
-    // TODO: Impl `iter()`
+    pub fn iter(&'b self) -> StackListIter<'b, T> {
+        StackListIter(self.0.as_ref().map(|inner| {
+            inner.as_ref()
+        }))
+    }
 }
 
 pub struct StackListMutIter<'a, 'b, 'c, T>(&'c mut Option<&'b mut NodeMut<'a, T>>);
 
-// TODO: Implemented fused?
 impl<'a, 'b, 'c, T> FusedIterator for StackListMutIter<'a, 'b, 'c, T> {}
 
 impl<'a, 'b, 'c, T> Iterator for StackListMutIter<'a, 'b, 'c, T> {
@@ -33,7 +37,7 @@ impl<'a, 'b, 'c, T> Iterator for StackListMutIter<'a, 'b, 'c, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let ptrs = self.0.as_mut().map(|inner| {
-            let content: (&mut Option<&mut NodeMut<T>>, &mut T) = inner.pair();
+            let content: (&mut Option<&mut NodeMut<T>>, &mut T) = inner.pair_mut();
             let value_ptr = content.1 as *mut T;
             let previous_ptr = content.0 as *mut Option<&mut NodeMut<T>>;
             let previous_ptr = previous_ptr as *mut Option<NonNull<NodeMut<T>>>; // Need to sever the inner lifetime too
@@ -55,6 +59,25 @@ impl<'a, 'b, 'c, T> Iterator for StackListMutIter<'a, 'b, 'c, T> {
     }
 }
 
+pub struct StackListIter<'a, T>(Option<&'a NodeRef<'a, T>>);
+
+impl<'a, T> FusedIterator for StackListIter<'a, T> {}
+
+impl<'a, T> Iterator for StackListIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.0 {
+            Some(inner) => {
+                let (previous, value) = inner.pair();
+                self.0 = *previous;
+                Some(&value)
+            }
+            None => None,
+        }
+    }
+}
+
 #[test]
 fn test_iter_mut() {
     let mut a = NodeMut::new(None, 1i32);
@@ -62,9 +85,9 @@ fn test_iter_mut() {
     let mut c = NodeMut::new(Some(&mut b), 3);
     let mut d = NodeMut::new(Some(&mut c), 4);
 
-    let f = &mut d;
+    let _f = &mut d;
     let head = &mut d;
-    let mut list = StackListMut(Some(head));
+    let mut _list = StackListMut(Some(head));
     let mut list = StackListMut(Some(head));
 
     {
