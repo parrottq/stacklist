@@ -8,9 +8,17 @@ arbitrary = { version = "1.2", features = ["derive"] }
 
 [features]
 alloc = []
+nightly = []
+default = ["alloc", "nightly"]
 
 [[example]]
 name = "basic"
 
 [[example]]
 name = "generator"
+
+[[example]]
+name = "stack_size"
+
+[[example]]
+name = "readme"

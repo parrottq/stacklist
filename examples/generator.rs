@@ -1,24 +1,7 @@
 #![feature(generators)]
 use std::pin::Pin;
 
-use stacklist::{list_from_generator, Op, StackListToken};
-
-// TODO: Move somewhere else?
-#[macro_export]
-macro_rules! yield_op {
-    ( $stack_list_token:expr, $op:expr) => {{
-        $stack_list_token = Some(
-            yield (
-                {
-                    // This line is for better error messages when the type is wrong.
-                    let token_mut: &mut Option<StackListToken<_, _>> = &mut $stack_list_token;
-                    token_mut.take().unwrap()
-                },
-                $op,
-            ),
-        );
-    }};
-}
+use stacklist::{list_from_generator, yield_op, Op, StackListToken};
 
 fn main() {
     let mut gen = |t: StackListToken<u8, _>| {

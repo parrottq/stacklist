@@ -1,11 +1,10 @@
-#![feature(generator_trait)]
+#![cfg_attr(feature = "nightly", feature(generators, generator_trait))]
 #![cfg_attr(not(feature = "alloc"), no_std)]
-use core::{
-    fmt::Debug,
-    marker::PhantomData,
-    ops::{Deref, Generator, GeneratorState},
-    pin::Pin,
-};
+use core::{fmt::Debug, marker::PhantomData, ops::Deref, pin::Pin};
+
+
+#[cfg(feature = "nightly")]
+use core::ops::{Generator, GeneratorState};
 
 #[cfg(feature = "alloc")]
 use arbitrary::Arbitrary;
@@ -20,7 +19,7 @@ mod node_mut;
 mod node_ref;
 
 pub use callback::list_from_fn;
-pub use list::{StackList, StackListMutIter, StackListIter};
+pub use list::{StackList, StackListIter, StackListMutIter};
 
 #[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "alloc", derive(Arbitrary))]
@@ -39,7 +38,6 @@ enum OpResult<U> {
     PopMultiple(usize),
     Clear,
 }
-
 
 // TODO: usize -> ()?
 pub struct StackListToken<T, U>(*const usize, PhantomData<T>, PhantomData<*const U>);
@@ -80,7 +78,24 @@ impl<'a, 'b, T> Deref for StackListTokenBorrowed<'a, 'b, T> {
     }
 }
 
-// TODO: Make the names better
+#[cfg(feature = "nightly")]
+#[macro_export]
+macro_rules! yield_op {
+    ( $stack_list_token:expr, $op:expr) => {{
+        $stack_list_token = Some(
+            yield (
+                {
+                    // This line is for better error messages when the type is wrong.
+                    let token_mut: &mut Option<StackListToken<_, _>> = &mut $stack_list_token;
+                    token_mut.take().unwrap()
+                },
+                $op,
+            ),
+        );
+    }};
+}
+
+#[cfg(feature = "nightly")]
 pub fn list_from_generator<T, R, U>(
     mut fun: Pin<
         &mut impl Generator<
