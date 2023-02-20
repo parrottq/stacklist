@@ -1,11 +1,11 @@
-use stacklist::{new_list, Op};
+use stacklist::{list_from_fn, Op};
 
 fn inner<T>(value: T) -> String
 where
     T: Clone,
 {
     let mut i = 0;
-    let result = new_list(|lst| {
+    let result = list_from_fn(|lst| {
         let r = match i {
             0 => Op::Store(value.clone()),
             1 => Op::Store(value.clone()),

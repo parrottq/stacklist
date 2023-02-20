@@ -1,9 +1,9 @@
-use stacklist::{new_list, Op};
+use stacklist::{list_from_fn, Op};
 
 fn main() {
     let mut i = 0i32;
 
-    let result = new_list(|lst| {
+    let result = list_from_fn(|lst| {
         i += 1;
         match i {
             0..=4 => {

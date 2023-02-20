@@ -19,7 +19,7 @@ mod list;
 mod node_mut;
 mod node_ref;
 
-pub use callback::new_list;
+pub use callback::list_from_fn;
 pub use list::{StackList, StackListMutIter, StackListIter};
 
 #[derive(Clone, Copy, Debug)]
@@ -94,7 +94,7 @@ pub fn list_from_generator<T, R, U>(
 where
     U: FnOnce(),
 {
-    callback::new_list(|lst| {
+    callback::list_from_fn(|lst| {
         StackListToken::lifetimeless_view(&lst, |tok| {
             let result = fun.as_mut().resume(tok);
             match result {

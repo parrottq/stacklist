@@ -28,7 +28,7 @@ fn inner_stack_list<'a, 'b, T, U>(
     }
 }
 
-pub fn new_list<T, U>(mut fun: impl for<'c, 'd> FnMut(&mut StackList<'c, 'd, T>) -> Op<T, U>) -> U {
+pub fn list_from_fn<T, U>(mut fun: impl for<'c, 'd> FnMut(&mut StackList<'c, 'd, T>) -> Op<T, U>) -> U {
     loop {
         match inner_stack_list(&mut fun, None) {
             OpResult::Return(result) => return result,
