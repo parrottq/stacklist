@@ -95,7 +95,7 @@ where
     U: FnOnce(),
 {
     callback::list_from_fn(|lst| {
-        StackListToken::lifetimeless_view(&lst, |tok| {
+        StackListToken::lifetimeless_view(lst, |tok| {
             let result = fun.as_mut().resume(tok);
             match result {
                 GeneratorState::Yielded((token, op)) => (token, op),

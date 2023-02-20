@@ -71,7 +71,7 @@ impl<'a, T> Iterator for StackListIter<'a, T> {
             Some(inner) => {
                 let (previous, value) = inner.pair();
                 self.0 = *previous;
-                Some(&value)
+                Some(value)
             }
             None => None,
         }
